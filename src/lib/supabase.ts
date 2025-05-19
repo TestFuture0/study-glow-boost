@@ -1,10 +1,9 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-// Use default values for development when environment variables aren't available
-// These will be replaced with actual values from Lovable's environment variables when deployed
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://your-project.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'your-anon-key';
+// Use the provided Supabase credentials
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://ggvcybeqifzdfivxstua.supabase.co';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdndmN5YmVxaWZ6ZGZpdnhzdHVhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc2NzgxNzMsImV4cCI6MjA2MzI1NDE3M30.xJAl27xjhdHeKWlLuQw-3x7C_8a7HaVtxtMUqXVgT0U';
 
 // Create the Supabase client
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
