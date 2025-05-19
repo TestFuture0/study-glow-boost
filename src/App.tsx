@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from "@/context/AuthContext";
 import Dashboard from "./pages/Dashboard";
 import LoginPage from "./pages/LoginPage";
 import FlashcardsPage from "./pages/FlashcardsPage";
@@ -22,17 +23,19 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/flashcards" element={<FlashcardsPage />} />
-          <Route path="/quizzes" element={<QuizzesPage />} />
-          <Route path="/explain" element={<ExplainPage />} />
-          <Route path="/achievements" element={<AchievementsPage />} />
-          <Route path="/points" element={<PointsPage />} />
-          <Route path="/pro" element={<ProPage />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AuthProvider>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/flashcards" element={<FlashcardsPage />} />
+            <Route path="/quizzes" element={<QuizzesPage />} />
+            <Route path="/explain" element={<ExplainPage />} />
+            <Route path="/achievements" element={<AchievementsPage />} />
+            <Route path="/points" element={<PointsPage />} />
+            <Route path="/pro" element={<ProPage />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

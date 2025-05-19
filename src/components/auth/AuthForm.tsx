@@ -1,10 +1,9 @@
 
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -17,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Mail, Lock, User } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { Loader2 } from "lucide-react";
 
 // Form schemas
 const loginSchema = z.object({
@@ -41,8 +41,7 @@ type RegisterSchema = z.infer<typeof registerSchema>;
 
 const AuthForm = () => {
   const [isLogin, setIsLogin] = useState(true);
-  const { toast } = useToast();
-  const navigate = useNavigate();
+  const { signIn, signUp, isLoading } = useAuth();
 
   // Login form
   const loginForm = useForm<LoginSchema>({
@@ -65,27 +64,13 @@ const AuthForm = () => {
   });
 
   // Handle login submission
-  const onLoginSubmit = (data: LoginSchema) => {
-    console.log("Login data:", data);
-    
-    // Mock successful login
-    toast({
-      title: "Login Successful",
-      description: "Welcome back to StudySpark!",
-    });
-    navigate("/");
+  const onLoginSubmit = async (data: LoginSchema) => {
+    await signIn(data.email, data.password);
   };
 
   // Handle registration submission
-  const onRegisterSubmit = (data: RegisterSchema) => {
-    console.log("Register data:", data);
-    
-    // Mock successful registration
-    toast({
-      title: "Registration Successful",
-      description: "Welcome to StudySpark! You can now log in.",
-    });
-    setIsLogin(true);
+  const onRegisterSubmit = async (data: RegisterSchema) => {
+    await signUp(data.email, data.password, data.name);
   };
 
   return (
@@ -125,6 +110,7 @@ const AuthForm = () => {
                         placeholder="you@example.com"
                         type="email"
                         className="rounded-l-none"
+                        disabled={isLoading}
                       />
                     </div>
                   </FormControl>
@@ -149,6 +135,7 @@ const AuthForm = () => {
                         placeholder="******"
                         type="password"
                         className="rounded-l-none"
+                        disabled={isLoading}
                       />
                     </div>
                   </FormControl>
@@ -157,8 +144,19 @@ const AuthForm = () => {
               )}
             />
 
-            <Button type="submit" className="w-full studyspark-gradient">
-              Login
+            <Button 
+              type="submit" 
+              className="w-full studyspark-gradient"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Logging in...
+                </>
+              ) : (
+                "Login"
+              )}
             </Button>
           </form>
         </Form>
@@ -183,6 +181,7 @@ const AuthForm = () => {
                         {...field}
                         placeholder="John Doe"
                         className="rounded-l-none"
+                        disabled={isLoading}
                       />
                     </div>
                   </FormControl>
@@ -207,6 +206,7 @@ const AuthForm = () => {
                         placeholder="you@example.com"
                         type="email"
                         className="rounded-l-none"
+                        disabled={isLoading}
                       />
                     </div>
                   </FormControl>
@@ -231,6 +231,7 @@ const AuthForm = () => {
                         placeholder="******"
                         type="password"
                         className="rounded-l-none"
+                        disabled={isLoading}
                       />
                     </div>
                   </FormControl>
@@ -255,6 +256,7 @@ const AuthForm = () => {
                         placeholder="******"
                         type="password"
                         className="rounded-l-none"
+                        disabled={isLoading}
                       />
                     </div>
                   </FormControl>
@@ -263,8 +265,19 @@ const AuthForm = () => {
               )}
             />
 
-            <Button type="submit" className="w-full studyspark-gradient">
-              Create Account
+            <Button 
+              type="submit" 
+              className="w-full studyspark-gradient"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating account...
+                </>
+              ) : (
+                "Create Account"
+              )}
             </Button>
           </form>
         </Form>
@@ -276,6 +289,7 @@ const AuthForm = () => {
           variant="link"
           className="p-0 text-studyspark-purple"
           onClick={() => setIsLogin(!isLogin)}
+          disabled={isLoading}
         >
           {isLogin ? "Sign up" : "Log in"}
         </Button>

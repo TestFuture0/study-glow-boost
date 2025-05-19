@@ -1,6 +1,6 @@
 
 import { ReactNode, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, Navigate } from "react-router-dom";
 import { 
   Book, 
   Home, 
@@ -9,12 +9,13 @@ import {
   CreditCard, 
   LogOut,
   Menu,
-  X
+  X,
+  Loader2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/context/AuthContext";
 
 type NavItemProps = {
   to: string;
@@ -53,23 +54,24 @@ type MainLayoutProps = {
 const MainLayout = ({ children }: MainLayoutProps) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const location = useLocation();
-  const { toast } = useToast();
+  const { signOut, isLoading, user } = useAuth();
   
-  // Logout function - to be implemented when auth is added
-  const handleLogout = () => {
-    toast({
-      title: "Logged out",
-      description: "You have been successfully logged out",
-    });
-    // Add actual logout logic when auth is implemented
-  };
+  // Redirect to login if not authenticated
+  if (!user && !isLoading) {
+    return <Navigate to="/login" />;
+  }
 
   // Toggle sidebar visibility on mobile
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
 
-  return (
+  return isLoading ? (
+    <div className="flex min-h-screen items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-studyspark-purple" />
+      <span className="ml-2 text-lg">Loading...</span>
+    </div>
+  ) : (
     <div className="flex min-h-screen flex-col md:flex-row">
       {/* Mobile Header */}
       <div className="flex items-center justify-between bg-white p-4 shadow-sm md:hidden dark:bg-slate-900">
@@ -97,6 +99,16 @@ const MainLayout = ({ children }: MainLayoutProps) => {
             </div>
             <span className="text-xl font-bold text-studyspark-purple">StudySpark</span>
           </Link>
+
+          {/* User info */}
+          {user && (
+            <div className="rounded-md bg-slate-100 p-3 dark:bg-slate-800">
+              <p className="font-medium">
+                {user.user_metadata?.full_name || user.email}
+              </p>
+              <p className="text-sm text-muted-foreground">{user.email}</p>
+            </div>
+          )}
 
           {/* Nav Links */}
           <nav className="flex flex-col gap-1">
@@ -152,10 +164,20 @@ const MainLayout = ({ children }: MainLayoutProps) => {
             <Button
               variant="ghost"
               className="flex w-full items-center justify-start gap-3 px-3 text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
-              onClick={handleLogout}
+              onClick={signOut}
+              disabled={isLoading}
             >
-              <LogOut size={18} />
-              <span>Logout</span>
+              {isLoading ? (
+                <>
+                  <Loader2 size={18} className="animate-spin" />
+                  <span>Logging out...</span>
+                </>
+              ) : (
+                <>
+                  <LogOut size={18} />
+                  <span>Logout</span>
+                </>
+              )}
             </Button>
           </div>
         </div>
