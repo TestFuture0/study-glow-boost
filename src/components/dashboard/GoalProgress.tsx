@@ -42,12 +42,11 @@ const GoalProgress = ({ goals }: GoalProgressProps) => {
                 </div>
                 <Progress
                   value={percentComplete}
-                  className="h-2 bg-slate-100 dark:bg-slate-800"
-                  indicatorClassName={
+                  className={`h-2 bg-slate-100 dark:bg-slate-800 ${
                     percentComplete >= 100 
                       ? "bg-studyspark-teal"
                       : "bg-studyspark-purple"
-                  }
+                  }`}
                 />
               </div>
             );
