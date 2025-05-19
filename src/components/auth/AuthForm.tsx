@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -63,6 +62,9 @@ const AuthForm = () => {
     },
   });
 
+  // Get the register function from registerForm
+  const { control: registerFormControl, register: registerField, handleSubmit: handleRegisterSubmit, formState: { errors: registerErrors } } = registerForm;
+
   // Handle login submission
   const onLoginSubmit = async (data: LoginSchema) => {
     await signIn(data.email, data.password);
@@ -110,7 +112,6 @@ const AuthForm = () => {
                         placeholder="you@example.com"
                         type="email"
                         className="rounded-l-none"
-                        disabled={isLoading}
                       />
                     </div>
                   </FormControl>
@@ -135,7 +136,6 @@ const AuthForm = () => {
                         placeholder="******"
                         type="password"
                         className="rounded-l-none"
-                        disabled={isLoading}
                       />
                     </div>
                   </FormControl>
@@ -147,7 +147,6 @@ const AuthForm = () => {
             <Button 
               type="submit" 
               className="w-full studyspark-gradient"
-              disabled={isLoading}
             >
               {isLoading ? (
                 <>
@@ -163,112 +162,92 @@ const AuthForm = () => {
       ) : (
         <Form {...registerForm}>
           <form
-            onSubmit={registerForm.handleSubmit(onRegisterSubmit)}
+            onSubmit={handleRegisterSubmit(onRegisterSubmit)}
             className="space-y-4"
           >
-            <FormField
-              control={registerForm.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Full Name</FormLabel>
-                  <FormControl>
-                    <div className="flex">
-                      <div className="flex items-center justify-center rounded-l-md border border-r-0 bg-muted px-3">
-                        <User size={16} className="text-muted-foreground" />
-                      </div>
-                      <Input
-                        {...field}
-                        placeholder="John Doe"
-                        className="rounded-l-none"
-                        disabled={isLoading}
-                      />
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* Full Name - Uncontrolled with register */}
+            <FormItem>
+              <FormLabel>Full Name</FormLabel>
+              <FormControl>
+                <div className="flex">
+                  <div className="flex items-center justify-center rounded-l-md border border-r-0 bg-muted px-3">
+                    <User size={16} className="text-muted-foreground" />
+                  </div>
+                  <input 
+                    {...registerField("name")}
+                    type="text"
+                    placeholder="John Doe (Uncontrolled)"
+                    autoComplete="off"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm rounded-l-none"
+                  />
+                </div>
+              </FormControl>
+              {registerErrors.name && <FormMessage>{registerErrors.name.message}</FormMessage>}
+            </FormItem>
 
-            <FormField
-              control={registerForm.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <div className="flex">
-                      <div className="flex items-center justify-center rounded-l-md border border-r-0 bg-muted px-3">
-                        <Mail size={16} className="text-muted-foreground" />
-                      </div>
-                      <Input
-                        {...field}
-                        placeholder="you@example.com"
-                        type="email"
-                        className="rounded-l-none"
-                        disabled={isLoading}
-                      />
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* Email - Uncontrolled with register */}
+            <FormItem>
+              <FormLabel>Email</FormLabel>
+              <FormControl>
+                <div className="flex">
+                  <div className="flex items-center justify-center rounded-l-md border border-r-0 bg-muted px-3">
+                    <Mail size={16} className="text-muted-foreground" />
+                  </div>
+                  <Input
+                    {...registerField("email")}
+                    type="email"
+                    placeholder="you@example.com"
+                    autoComplete="email"
+                    className="rounded-l-none"
+                  />
+                </div>
+              </FormControl>
+              {registerErrors.email && <FormMessage>{registerErrors.email.message}</FormMessage>}
+            </FormItem>
 
-            <FormField
-              control={registerForm.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Password</FormLabel>
-                  <FormControl>
-                    <div className="flex">
-                      <div className="flex items-center justify-center rounded-l-md border border-r-0 bg-muted px-3">
-                        <Lock size={16} className="text-muted-foreground" />
-                      </div>
-                      <Input
-                        {...field}
-                        placeholder="******"
-                        type="password"
-                        className="rounded-l-none"
-                        disabled={isLoading}
-                      />
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* Password - Uncontrolled with register */}
+            <FormItem>
+              <FormLabel>Password</FormLabel>
+              <FormControl>
+                <div className="flex">
+                  <div className="flex items-center justify-center rounded-l-md border border-r-0 bg-muted px-3">
+                    <Lock size={16} className="text-muted-foreground" />
+                  </div>
+                  <Input
+                    {...registerField("password")}
+                    type="password"
+                    placeholder="******"
+                    autoComplete="new-password"
+                    className="rounded-l-none"
+                  />
+                </div>
+              </FormControl>
+              {registerErrors.password && <FormMessage>{registerErrors.password.message}</FormMessage>}
+            </FormItem>
 
-            <FormField
-              control={registerForm.control}
-              name="confirmPassword"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Confirm Password</FormLabel>
-                  <FormControl>
-                    <div className="flex">
-                      <div className="flex items-center justify-center rounded-l-md border border-r-0 bg-muted px-3">
-                        <Lock size={16} className="text-muted-foreground" />
-                      </div>
-                      <Input
-                        {...field}
-                        placeholder="******"
-                        type="password"
-                        className="rounded-l-none"
-                        disabled={isLoading}
-                      />
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* Confirm Password - Uncontrolled with register */}
+            <FormItem>
+              <FormLabel>Confirm Password</FormLabel>
+              <FormControl>
+                <div className="flex">
+                  <div className="flex items-center justify-center rounded-l-md border border-r-0 bg-muted px-3">
+                    <Lock size={16} className="text-muted-foreground" />
+                  </div>
+                  <Input
+                    {...registerField("confirmPassword")}
+                    type="password"
+                    placeholder="******"
+                    autoComplete="new-password"
+                    className="rounded-l-none"
+                  />
+                </div>
+              </FormControl>
+              {registerErrors.confirmPassword && <FormMessage>{registerErrors.confirmPassword.message}</FormMessage>}
+            </FormItem>
 
             <Button 
               type="submit" 
               className="w-full studyspark-gradient"
-              disabled={isLoading}
             >
               {isLoading ? (
                 <>
@@ -289,7 +268,6 @@ const AuthForm = () => {
           variant="link"
           className="p-0 text-studyspark-purple"
           onClick={() => setIsLogin(!isLogin)}
-          disabled={isLoading}
         >
           {isLogin ? "Sign up" : "Log in"}
         </Button>
