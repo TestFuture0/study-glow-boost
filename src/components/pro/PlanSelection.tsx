@@ -5,30 +5,21 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { Check, CreditCard, Loader2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
-// This is a mock for pro status check
-// In a real app, this would be connected to auth and subscription state
-const useProStatus = () => {
-  return { isPro: false };
-};
+import { useSubscription } from "@/hooks/useSubscription";
 
 const PlanSelection = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [billingCycle, setBillingCycle] = useState("monthly");
   const { toast } = useToast();
-  const { isPro } = useProStatus();
+  const { isSubscribed, plan, isLoading, handleSubscribe } = useSubscription();
 
-  const handleSubscribe = (planType: string) => {
+  const handleSubscribeClick = (planType: string) => {
     setIsProcessing(true);
 
-    // Mock payment processing
-    setTimeout(() => {
+    // Call subscription handler
+    handleSubscribe(planType).finally(() => {
       setIsProcessing(false);
-      toast({
-        title: "Subscription not active",
-        description: "This is a demo. Stripe integration would be implemented here.",
-      });
-    }, 2000);
+    });
   };
 
   const monthlyPrice = 9.99;
@@ -57,9 +48,16 @@ const PlanSelection = () => {
       </Tabs>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <Card>
+        <Card className={plan === 'free' ? 'border-green-500' : ''}>
           <CardHeader>
-            <CardTitle>Free Plan</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle>Free Plan</CardTitle>
+              {plan === 'free' && (
+                <span className="rounded-full bg-green-500 px-3 py-1 text-xs text-white">
+                  CURRENT PLAN
+                </span>
+              )}
+            </div>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="text-center">
@@ -89,20 +87,26 @@ const PlanSelection = () => {
             <Button
               variant="outline"
               className="w-full"
-              disabled={isPro || isProcessing}
+              disabled={true}
             >
               Current Plan
             </Button>
           </CardContent>
         </Card>
 
-        <Card className="border-studyspark-purple bg-gradient-to-br from-white to-purple-50 dark:from-slate-800 dark:to-slate-900">
+        <Card className={`${plan === 'pro' ? 'border-studyspark-purple' : ''} bg-gradient-to-br from-white to-purple-50 dark:from-slate-800 dark:to-slate-900`}>
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Pro Plan</CardTitle>
-              <span className="rounded-full bg-studyspark-purple px-3 py-1 text-xs text-white">
-                RECOMMENDED
-              </span>
+              {plan === 'pro' ? (
+                <span className="rounded-full bg-studyspark-purple px-3 py-1 text-xs text-white">
+                  CURRENT PLAN
+                </span>
+              ) : (
+                <span className="rounded-full bg-studyspark-purple px-3 py-1 text-xs text-white">
+                  RECOMMENDED
+                </span>
+              )}
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -147,14 +151,16 @@ const PlanSelection = () => {
 
             <Button
               className="w-full studyspark-gradient"
-              onClick={() => handleSubscribe("pro")}
-              disabled={isProcessing}
+              onClick={() => handleSubscribeClick("pro")}
+              disabled={isProcessing || isLoading || plan === 'pro'}
             >
               {isProcessing ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Processing...
                 </>
+              ) : plan === 'pro' ? (
+                "Current Plan"
               ) : (
                 <>
                   <CreditCard className="mr-2 h-4 w-4" />

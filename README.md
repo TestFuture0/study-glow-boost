@@ -1,73 +1,92 @@
-# Welcome to your Lovable project
 
-## Project info
+# StudySpark - Study Management Platform
 
-**URL**: https://lovable.dev/projects/f43e87f7-e33d-402f-85a8-a82261bb8c62
+StudySpark is a comprehensive study management platform that helps students track their progress, create flashcards, take quizzes, and earn points and achievements.
 
-## How can I edit this code?
+## Features
 
-There are several ways of editing your application.
+- **User Authentication**: Secure signup and login with email/password
+- **Dashboard**: View study progress, goals, streaks, and recent activity
+- **Flashcards**: Create and review flashcards for effective learning
+- **AI Quizzes**: Generate quizzes based on your study materials
+- **AI Concept Explainer**: Get clear explanations of complex topics (Pro feature)
+- **Points & Achievements**: Earn points and unlock achievements as you study
+- **Pro Subscription**: Access premium features with a Pro subscription
 
-**Use Lovable**
+## Technologies
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/f43e87f7-e33d-402f-85a8-a82261bb8c62) and start prompting.
+- React + TypeScript
+- Tailwind CSS
+- Shadcn UI components
+- Supabase for authentication and database
+- Stripe for payment processing (in development)
 
-Changes made via Lovable will be committed automatically to this repo.
+## Setup Instructions
 
-**Use your preferred IDE**
+### 1. Clone the repository
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+```bash
+git clone https://github.com/yourusername/studyspark.git
+cd studyspark
+```
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### 2. Install dependencies
 
-Follow these steps:
+```bash
+npm install
+```
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+### 3. Set up Supabase
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+1. Create a Supabase project at https://supabase.com
+2. Get your Supabase URL and anon key from the API settings
+3. Apply the database migrations from `supabase/migrations/` to set up the required tables
+4. Set up the following environment variables:
 
-# Step 3: Install the necessary dependencies.
-npm i
+```
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+### 4. Set up Stripe (for Pro subscription)
+
+1. Create a Stripe account at https://stripe.com
+2. Get your Stripe publishable key and secret key
+3. Set up the appropriate Stripe products and prices
+4. Create the necessary Supabase Edge Functions for Stripe integration
+5. Set up the following environment variables:
+
+```
+VITE_STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
+```
+
+### 5. Run the development server
+
+```bash
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## Database Schema
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+The application uses the following database tables:
 
-**Use GitHub Codespaces**
+- `profiles`: User profiles with points, levels, and streak information
+- `points_history`: Record of points earned by users
+- `goals`: User study goals
+- `activity`: Record of user activity
+- `study_sessions`: Record of study sessions
+- `badges`: Available achievements/badges
+- `user_badges`: Badges earned by users
+- `subscriptions`: User subscription information
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Contributing
 
-## What technologies are used for this project?
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/your-feature`)
+3. Commit your changes (`git commit -m 'Add some feature'`)
+4. Push to the branch (`git push origin feature/your-feature`)
+5. Open a Pull Request
 
-This project is built with:
+## License
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/f43e87f7-e33d-402f-85a8-a82261bb8c62) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+[MIT](LICENSE)
