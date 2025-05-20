@@ -84,6 +84,19 @@ interface UserBadge {
   };
 }
 
+// Define the expected shape of raw database records
+interface RawUserBadge {
+  id: number;
+  progress: number;
+  earned: boolean;
+  badge: {
+    id: number;
+    name: string;
+    description: string;
+    icon: string;
+  } | null; // Allow for potential null value
+}
+
 const AchievementsPage = () => {
   const { user } = useAuth();
   const [badges, setBadges] = useState<Badge[]>([]);
@@ -134,9 +147,12 @@ const AchievementsPage = () => {
           // Map the badges data, ensuring correct type handling
           const mappedBadges: Badge[] = [];
           
-          for (const item of userBadges) {
-            // Ensure item.badge is not an array but an object with the expected properties
-            if (item && item.badge && typeof item.badge === 'object' && !Array.isArray(item.badge)) {
+          // Cast the data to our expected structure
+          const typedUserBadges = userBadges as RawUserBadge[];
+          
+          for (const item of typedUserBadges) {
+            // Ensure item.badge is not null and has the expected properties
+            if (item && item.badge && typeof item.badge === 'object') {
               mappedBadges.push({
                 id: item.badge.id,
                 name: item.badge.name,
