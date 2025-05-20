@@ -1,25 +1,60 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { Check, CreditCard, Loader2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSubscription } from "@/hooks/useSubscription";
+import { useAuth } from "@/context/AuthContext";
 
 const PlanSelection = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [billingCycle, setBillingCycle] = useState("monthly");
   const { toast } = useToast();
-  const { isSubscribed, plan, isLoading, handleSubscribe } = useSubscription();
+  const { isSubscribed, plan, isLoading, handleSubscribe, checkSubscription } = useSubscription();
+  const { user } = useAuth();
 
-  const handleSubscribeClick = (planType: string) => {
+  // Check subscription status on mount and when user changes
+  useEffect(() => {
+    if (user) {
+      checkSubscription();
+    }
+  }, [user, checkSubscription]);
+
+  const handleSubscribeClick = async (planType: string) => {
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to subscribe",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setIsProcessing(true);
 
-    // Call subscription handler
-    handleSubscribe(planType).finally(() => {
+    try {
+      // Call subscription handler
+      await handleSubscribe(planType);
+      
+      toast({
+        title: "Subscription success",
+        description: `Your ${planType} subscription has been activated!`,
+      });
+      
+      // Refresh subscription status
+      await checkSubscription();
+    } catch (error) {
+      console.error("Subscription error:", error);
+      toast({
+        title: "Subscription failed",
+        description: "There was an error processing your subscription. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
       setIsProcessing(false);
-    });
+    }
   };
 
   const monthlyPrice = 9.99;

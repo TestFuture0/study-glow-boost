@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { toast } from "@/components/ui/use-toast";
@@ -22,77 +22,88 @@ export function useProfile() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const fetchProfile = useCallback(async () => {
     if (!user) {
       setProfile(null);
       setIsLoading(false);
       return;
     }
 
-    const fetchProfile = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
+    try {
+      setIsLoading(true);
+      setError(null);
 
-        // First try to get the profile
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
+      console.log("Fetching profile for user:", user.id);
 
-        if (profileError) {
-          // If profile doesn't exist, create it
-          if (profileError.code === 'PGRST116') {
-            const defaultProfile = {
-              id: user.id,
-              points: 0,
-              level: 1,
-              points_to_next_level: 250,
-              total_points_for_next_level: 250,
-              streak_current: 0,
-              streak_longest: 0,
-              last_active: new Date().toISOString(),
-              is_pro: false,
-            };
+      // First try to get the profile
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
 
-            const { error: insertError } = await supabase
-              .from('profiles')
-              .insert([defaultProfile]);
+      if (profileError) {
+        console.log("Profile error:", profileError);
+        
+        // If profile doesn't exist, create it
+        if (profileError.code === 'PGRST116') {
+          console.log("Creating new profile for user");
+          
+          const defaultProfile = {
+            id: user.id,
+            points: 0,
+            level: 1,
+            streak_current: 0,
+            streak_longest: 0,
+            last_active: new Date().toISOString(),
+            is_pro: false,
+          };
 
-            if (insertError) {
-              throw insertError;
-            }
+          const { error: insertError } = await supabase
+            .from('profiles')
+            .insert([defaultProfile]);
 
-            setProfile(defaultProfile);
-          } else {
-            throw profileError;
+          if (insertError) {
+            console.error("Error creating profile:", insertError);
+            throw insertError;
           }
-        } else {
-          // Calculate level and points to next level
-          const processedProfile = processProfileData(profileData);
-          setProfile(processedProfile);
-        }
-      } catch (err) {
-        console.error("Error fetching profile:", err);
-        setError(err instanceof Error ? err.message : "An unknown error occurred");
-        toast({
-          title: "Error fetching profile",
-          description: err instanceof Error ? err.message : "Failed to load profile data",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
 
-    fetchProfile();
+          // Process and set the default profile
+          const processedProfile = processProfileData(defaultProfile);
+          setProfile(processedProfile);
+          console.log("New profile created:", processedProfile);
+        } else {
+          throw profileError;
+        }
+      } else {
+        // Calculate level and points to next level
+        const processedProfile = processProfileData(profileData);
+        setProfile(processedProfile);
+        console.log("Existing profile loaded:", processedProfile);
+      }
+    } catch (err) {
+      console.error("Error fetching profile:", err);
+      setError(err instanceof Error ? err.message : "An unknown error occurred");
+      toast({
+        title: "Error fetching profile",
+        description: err instanceof Error ? err.message : "Failed to load profile data",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   }, [user]);
+
+  useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile]);
 
   const updateProfile = async (updates: Partial<UserProfile>) => {
     if (!user) return null;
     
     try {
+      console.log("Updating profile with:", updates);
+      
       const { data, error } = await supabase
         .from('profiles')
         .update(updates)
@@ -104,6 +115,7 @@ export function useProfile() {
       
       const updatedProfile = processProfileData(data);
       setProfile(updatedProfile);
+      console.log("Profile updated:", updatedProfile);
       return updatedProfile;
     } catch (err) {
       console.error("Error updating profile:", err);
@@ -120,6 +132,8 @@ export function useProfile() {
     if (!user || !profile) return null;
     
     try {
+      console.log(`Adding ${points} points for ${action}`);
+      
       // First update the profile with new points
       const newTotalPoints = profile.points + points;
       const updatedProfile = await updateProfile({ points: newTotalPoints });
@@ -179,5 +193,12 @@ export function useProfile() {
     };
   };
 
-  return { profile, isLoading, error, updateProfile, addPoints };
+  return { 
+    profile, 
+    isLoading, 
+    error, 
+    updateProfile, 
+    addPoints,
+    refreshProfile: fetchProfile 
+  };
 }

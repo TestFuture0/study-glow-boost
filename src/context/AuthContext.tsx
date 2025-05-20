@@ -147,15 +147,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     try {
       setIsLoading(true);
+      
+      // First notify user that logout is in progress
+      toast({
+        title: 'Signing out...',
+        description: 'Please wait while we log you out',
+      });
+      
       const { error } = await supabase.auth.signOut();
       
       if (error) throw error;
+      
+      // Clear local state
+      setUser(null);
+      setSession(null);
       
       toast({
         title: 'Signed out',
         description: 'You have been successfully signed out',
       });
       
+      // Navigate after state is cleared
       navigate('/login');
     } catch (error: any) {
       toast({

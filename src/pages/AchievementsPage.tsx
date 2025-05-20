@@ -1,3 +1,4 @@
+
 import MainLayout from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -70,6 +71,19 @@ const defaultBadges: Badge[] = [
   },
 ];
 
+// Interface for user badge data from Supabase
+interface UserBadge {
+  id: number;
+  progress: number;
+  earned: boolean;
+  badge: {
+    id: number;
+    name: string;
+    description: string;
+    icon: string;
+  };
+}
+
 const AchievementsPage = () => {
   const { user } = useAuth();
   const [badges, setBadges] = useState<Badge[]>([]);
@@ -115,8 +129,8 @@ const AchievementsPage = () => {
         if (badgesError) throw badgesError;
         
         if (userBadges && userBadges.length > 0) {
-          // Fixed: Correctly map each userBadge item in the array
-          const mappedBadges = userBadges.map((userBadge: any) => ({
+          // Correctly map each userBadge item in the array with proper typing
+          const mappedBadges = userBadges.map((userBadge: UserBadge) => ({
             id: userBadge.badge.id,
             name: userBadge.badge.name,
             description: userBadge.badge.description,

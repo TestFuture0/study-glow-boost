@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/components/ui/use-toast';
@@ -20,7 +20,7 @@ export const useSubscription = () => {
     isLoading: true,
   });
 
-  const checkSubscription = async () => {
+  const checkSubscription = useCallback(async () => {
     if (!user) {
       setStatus({
         isSubscribed: false,
@@ -43,7 +43,7 @@ export const useSubscription = () => {
         .single();
         
       if (error && error.code !== 'PGRST116') {
-        throw error;
+        console.error('Error checking subscription:', error);
       }
       
       // If subscription exists and is active
@@ -71,7 +71,7 @@ export const useSubscription = () => {
         isLoading: false
       });
     }
-  };
+  }, [user]);
 
   // Function to handle subscription checkout
   const handleSubscribe = async (planType: string) => {
@@ -81,7 +81,7 @@ export const useSubscription = () => {
         description: "Please log in to subscribe",
         variant: "destructive"
       });
-      return;
+      return Promise.reject(new Error("Authentication required"));
     }
     
     try {
@@ -108,8 +108,18 @@ export const useSubscription = () => {
         description: `You are now subscribed to the ${planType} plan!`,
       });
       
-      // Refresh subscription status
-      await checkSubscription();
+      // Return the updated status
+      const updatedStatus = {
+        isSubscribed: true,
+        plan: planType as 'free' | 'basic' | 'pro',
+        expiresAt: expiresAt.toISOString(),
+        isLoading: false
+      };
+      
+      // Update the local state
+      setStatus(updatedStatus);
+      
+      return updatedStatus;
     } catch (error) {
       console.error('Error subscribing:', error);
       toast({
@@ -117,13 +127,14 @@ export const useSubscription = () => {
         description: "There was an error processing your subscription",
         variant: "destructive"
       });
+      return Promise.reject(error);
     }
   };
 
   // Check subscription on mount and when user changes
   useEffect(() => {
     checkSubscription();
-  }, [user]);
+  }, [user, checkSubscription]);
 
   return {
     ...status,
