@@ -1,4 +1,3 @@
-
 import MainLayout from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -116,15 +115,16 @@ const AchievementsPage = () => {
         if (badgesError) throw badgesError;
         
         if (userBadges && userBadges.length > 0) {
-          // Fix: Map through userBadges array and properly access the nested badge properties
-          setBadges(userBadges.map(badge => ({
-            id: badge.badge.id,
-            name: badge.badge.name,
-            description: badge.badge.description,
-            progress: badge.progress,
-            icon: badge.badge.icon,
-            earned: badge.earned,
-          })));
+          // Fixed: Correctly map each userBadge item in the array
+          const mappedBadges = userBadges.map((userBadge: any) => ({
+            id: userBadge.badge.id,
+            name: userBadge.badge.name,
+            description: userBadge.badge.description,
+            progress: userBadge.progress,
+            icon: userBadge.badge.icon,
+            earned: userBadge.earned,
+          }));
+          setBadges(mappedBadges);
         } else {
           // No badges found for user, use defaults
           setBadges(defaultBadges);
