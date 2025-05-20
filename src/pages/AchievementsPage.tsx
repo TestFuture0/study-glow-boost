@@ -116,6 +116,7 @@ const AchievementsPage = () => {
         if (badgesError) throw badgesError;
         
         if (userBadges && userBadges.length > 0) {
+          // Fix: Map through userBadges array and properly access the nested badge properties
           setBadges(userBadges.map(badge => ({
             id: badge.badge.id,
             name: badge.badge.name,
