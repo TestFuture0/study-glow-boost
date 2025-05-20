@@ -3,12 +3,14 @@ import MainLayout from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Star, TrendingUp, Loader2 } from "lucide-react";
+import { Star, TrendingUp, Loader2, AlertTriangle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { toast } from "@/components/ui/use-toast";
 
 type PointsHistoryItem = {
   id: number;
@@ -19,9 +21,10 @@ type PointsHistoryItem = {
 
 const PointsPage = () => {
   const { user } = useAuth();
-  const { profile, isLoading: profileLoading } = useProfile();
+  const { profile, isLoading: profileLoading, error: profileError } = useProfile();
   const [pointsHistory, setPointsHistory] = useState<PointsHistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
     const fetchPointsHistory = async () => {
@@ -29,6 +32,8 @@ const PointsPage = () => {
       
       try {
         setIsLoading(true);
+        setError(null);
+        
         const { data, error } = await supabase
           .from('points_history')
           .select('*')
@@ -80,8 +85,9 @@ const PointsPage = () => {
             },
           ]);
         }
-      } catch (error) {
-        console.error("Error fetching points history:", error);
+      } catch (err) {
+        console.error("Error fetching points history:", err);
+        setError(err instanceof Error ? err : new Error("An unknown error occurred"));
       } finally {
         setIsLoading(false);
       }
@@ -115,6 +121,7 @@ const PointsPage = () => {
 
   const levelRequirements = [0, 250, 500, 1000, 2000, 3500, 5000, 7000, 10000];
 
+  // Loading state
   if (profileLoading || isLoading) {
     return (
       <MainLayout>
@@ -168,10 +175,53 @@ const PointsPage = () => {
     );
   }
 
+  // Error state
+  if (profileError || error) {
+    return (
+      <MainLayout>
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold">Points & Levels</h1>
+              <p className="text-muted-foreground">
+                Track your progress and points earned through your study journey
+              </p>
+            </div>
+            <div className="rounded-full border-2 border-amber-400 bg-white p-3 dark:bg-slate-800">
+              <Star className="h-6 w-6 text-amber-400" />
+            </div>
+          </div>
+
+          <Card className="p-6">
+            <div className="flex flex-col items-center justify-center gap-4 text-center">
+              <AlertTriangle className="h-12 w-12 text-amber-500" />
+              <h2 className="text-xl font-semibold">Database Setup Required</h2>
+              <p className="max-w-md text-muted-foreground">
+                It looks like your Supabase database tables haven't been created yet. 
+                Please run the migrations in the <code className="bg-muted px-1 py-0.5 rounded text-sm">supabase/migrations/</code> folder to set up the necessary tables.
+              </p>
+              <Button 
+                onClick={() => {
+                  toast({
+                    title: "Setup instructions",
+                    description: "Check the README.md file for setup instructions or run the SQL migrations manually in your Supabase project.",
+                  });
+                }}
+              >
+                Learn More
+              </Button>
+            </div>
+          </Card>
+        </div>
+      </MainLayout>
+    );
+  }
+
   if (!profile) {
     return null;
   }
 
+  // Success state with data
   return (
     <MainLayout>
       <div className="space-y-6">

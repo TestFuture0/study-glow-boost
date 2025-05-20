@@ -2,7 +2,13 @@
 import MainLayout from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Award } from "lucide-react";
+import { Award, AlertTriangle } from "lucide-react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/context/AuthContext";
+import { Button } from "@/components/ui/button";
+import { toast } from "@/components/ui/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type Badge = {
   id: number;
@@ -13,7 +19,8 @@ type Badge = {
   earned: boolean;
 };
 
-const badges: Badge[] = [
+// Default badges if database isn't available
+const defaultBadges: Badge[] = [
   {
     id: 1,
     name: "Quiz Master",
@@ -65,6 +72,155 @@ const badges: Badge[] = [
 ];
 
 const AchievementsPage = () => {
+  const { user } = useAuth();
+  const [badges, setBadges] = useState<Badge[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    const fetchBadges = async () => {
+      if (!user) return;
+      
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        // Check if the badges table exists by querying it
+        const { error: tableCheckError } = await supabase
+          .from('badges')
+          .select('count', { count: 'exact', head: true });
+          
+        // If there's an error (likely table doesn't exist), use default badges
+        if (tableCheckError) {
+          console.log("Using default badges because:", tableCheckError.message);
+          setBadges(defaultBadges);
+          return;
+        }
+        
+        // Query user badges if table exists
+        const { data: userBadges, error: badgesError } = await supabase
+          .from('user_badges')
+          .select(`
+            id,
+            progress,
+            earned,
+            badge:badges (
+              id,
+              name,
+              description,
+              icon
+            )
+          `)
+          .eq('user_id', user.id);
+          
+        if (badgesError) throw badgesError;
+        
+        if (userBadges && userBadges.length > 0) {
+          setBadges(userBadges.map(badge => ({
+            id: badge.badge.id,
+            name: badge.badge.name,
+            description: badge.badge.description,
+            progress: badge.progress,
+            icon: badge.badge.icon,
+            earned: badge.earned,
+          })));
+        } else {
+          // No badges found for user, use defaults
+          setBadges(defaultBadges);
+        }
+      } catch (err) {
+        console.error("Error fetching badges:", err);
+        setError(err instanceof Error ? err : new Error("An unknown error occurred"));
+        setBadges(defaultBadges); // Fallback to defaults on error
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchBadges();
+  }, [user]);
+
+  if (isLoading) {
+    return (
+      <MainLayout>
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold">Achievements & Badges</h1>
+              <p className="text-muted-foreground">
+                Track your progress and earn badges for your accomplishments
+              </p>
+            </div>
+            <div className="rounded-full border-2 border-studyspark-purple bg-white p-3 dark:bg-slate-800">
+              <Award className="h-6 w-6 text-studyspark-purple" />
+            </div>
+          </div>
+
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <Card key={index}>
+                <CardHeader className="pb-2">
+                  <Skeleton className="h-6 w-32" />
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-2 w-full" />
+                  <div className="flex justify-between">
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="h-4 w-16" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  // Show a nice error state
+  if (error && badges.length === 0) {
+    return (
+      <MainLayout>
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold">Achievements & Badges</h1>
+              <p className="text-muted-foreground">
+                Track your progress and earn badges for your accomplishments
+              </p>
+            </div>
+            <div className="rounded-full border-2 border-studyspark-purple bg-white p-3 dark:bg-slate-800">
+              <Award className="h-6 w-6 text-studyspark-purple" />
+            </div>
+          </div>
+
+          <Card className="p-6">
+            <div className="flex flex-col items-center justify-center gap-4 text-center">
+              <AlertTriangle className="h-12 w-12 text-amber-500" />
+              <h2 className="text-xl font-semibold">Database Setup Required</h2>
+              <p className="max-w-md text-muted-foreground">
+                It looks like your Supabase database tables haven't been created yet. 
+                Please run the migrations in the <code className="bg-muted px-1 py-0.5 rounded text-sm">supabase/migrations/</code> folder to set up the necessary tables.
+              </p>
+              <Button 
+                onClick={() => {
+                  toast({
+                    title: "Setup instructions",
+                    description: "Check the README.md file for setup instructions or run the SQL migrations manually in your Supabase project.",
+                  });
+                }}
+              >
+                Learn More
+              </Button>
+            </div>
+          </Card>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  // Show badges (either from database or defaults)
   return (
     <MainLayout>
       <div className="space-y-6">
@@ -79,6 +235,18 @@ const AchievementsPage = () => {
             <Award className="h-6 w-6 text-studyspark-purple" />
           </div>
         </div>
+
+        {/* Show warning if using default badges */}
+        {error && (
+          <Card className="mb-6 bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
+            <CardContent className="p-4 flex items-center gap-3">
+              <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0" />
+              <p className="text-sm text-amber-800 dark:text-amber-300">
+                Using demo data. Set up your database for real achievements tracking.
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {badges.map((badge) => (
