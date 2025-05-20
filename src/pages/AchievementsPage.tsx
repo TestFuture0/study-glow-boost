@@ -71,7 +71,7 @@ const defaultBadges: Badge[] = [
   },
 ];
 
-// Interface for user badge data from Supabase
+// Fixed interface for user badge data from Supabase
 interface UserBadge {
   id: number;
   progress: number;
@@ -129,18 +129,36 @@ const AchievementsPage = () => {
         if (badgesError) throw badgesError;
         
         if (userBadges && userBadges.length > 0) {
-          // Correctly map each userBadge item in the array with proper typing
-          const mappedBadges = userBadges.map((userBadge: UserBadge) => ({
-            id: userBadge.badge.id,
-            name: userBadge.badge.name,
-            description: userBadge.badge.description,
-            progress: userBadge.progress,
-            icon: userBadge.badge.icon,
-            earned: userBadge.earned,
-          }));
-          setBadges(mappedBadges);
+          console.log("Fetched badges data:", JSON.stringify(userBadges, null, 2));
+          
+          // Map the badges data, ensuring correct type handling
+          const mappedBadges: Badge[] = [];
+          
+          for (const item of userBadges) {
+            // Ensure item.badge is not an array but an object with the expected properties
+            if (item && item.badge && typeof item.badge === 'object' && !Array.isArray(item.badge)) {
+              mappedBadges.push({
+                id: item.badge.id,
+                name: item.badge.name,
+                description: item.badge.description,
+                progress: item.progress,
+                icon: item.badge.icon,
+                earned: item.earned,
+              });
+            } else {
+              console.warn("Skipping invalid badge data:", item);
+            }
+          }
+          
+          if (mappedBadges.length > 0) {
+            setBadges(mappedBadges);
+          } else {
+            console.log("No valid badges found, using default badges");
+            setBadges(defaultBadges);
+          }
         } else {
           // No badges found for user, use defaults
+          console.log("No badges found for user, using defaults");
           setBadges(defaultBadges);
         }
       } catch (err) {
