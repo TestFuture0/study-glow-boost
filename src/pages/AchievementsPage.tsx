@@ -70,12 +70,12 @@ const defaultBadges: Badge[] = [
   },
 ];
 
-// Fixed interface for user badge data from Supabase
+// Interface for user badge data from Supabase
 interface UserBadge {
   id: number;
   progress: number;
   earned: boolean;
-  badge: { // This is an OBJECT from the joined 'badges' table, or null
+  badge: { // This is an OBJECT, not an array
     id: number;
     name: string;
     description: string;
@@ -110,7 +110,7 @@ const AchievementsPage = () => {
         }
         
         // Query user badges if table exists
-        const { data: userBadges, error: badgesError } = await supabase
+        const { data: userBadgesRaw, error: badgesError } = await supabase
           .from('user_badges')
           .select(`
             id,
@@ -127,45 +127,39 @@ const AchievementsPage = () => {
           
         if (badgesError) throw badgesError;
 
-        // Explicitly cast the fetched data to UserBadge[] via unknown
-        const typedUserBadges = userBadges as unknown as UserBadge[] | null;
+        // Explicitly cast data
+        const typedUserBadges = userBadgesRaw as unknown as UserBadge[] | null;
         
         if (typedUserBadges && typedUserBadges.length > 0) {
           console.log("Fetched badges data ( AchievementsPage ):", JSON.stringify(typedUserBadges, null, 2));
           
-          const mappedBadges: Badge[] = typedUserBadges.map(item => {
-            // item.badge is an object or null, directly use it
-            const badgeData = item.badge; 
-
-            if (badgeData) { // Check if badgeData (the badge object) is not null
+          const mappedBadges: Badge[] = typedUserBadges
+            .filter(item => item.badge !== null) // Filter out items with null badge
+            .map(item => {
               return {
-                id: badgeData.id,
-                name: badgeData.name,
-                description: badgeData.description,
+                id: item.badge!.id, // We've filtered out nulls, so the ! is safe
+                name: item.badge!.name,
+                description: item.badge!.description,
                 progress: item.progress,
-                icon: badgeData.icon,
+                icon: item.badge!.icon,
                 earned: item.earned,
               };
-            } else {
-              console.warn("Skipping user_badge item due to missing badge object (badge was null):", item);
-              return null; 
-            }
-          }).filter(Boolean) as Badge[];
+            });
           
           if (mappedBadges.length > 0) {
             setBadges(mappedBadges);
           } else {
-            console.log("No valid badges could be mapped from fetched data, setting to empty array.");
-            setBadges([]);
+            console.log("No valid badges could be mapped from fetched data, using default badges.");
+            setBadges(defaultBadges);
           }
         } else {
-          console.log("No badges found for user, setting to empty array.");
-          setBadges([]);
+          console.log("No badges found for user, using default badges.");
+          setBadges(defaultBadges);
         }
       } catch (err) {
         console.error("Error fetching badges:", err);
         setError(err instanceof Error ? err : new Error("An unknown error occurred"));
-        setBadges([]);
+        setBadges(defaultBadges);
       } finally {
         setIsLoading(false);
       }

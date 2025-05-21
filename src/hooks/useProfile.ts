@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase";
@@ -16,15 +15,37 @@ export type UserProfile = {
   is_pro: boolean;
 };
 
+// Cache for profile data
+const profileCache: Record<string, {
+  data: UserProfile;
+  timestamp: number;
+}> = {};
+
+// Cache duration in milliseconds (5 minutes)
+const CACHE_DURATION = 5 * 60 * 1000;
+
 export function useProfile() {
   const { user } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchProfile = useCallback(async () => {
+  const fetchProfile = useCallback(async (forceRefresh = false) => {
     if (!user) {
       setProfile(null);
+      setIsLoading(false);
+      return;
+    }
+
+    const userId = user.id;
+    const now = Date.now();
+    
+    // Check cache first unless force refreshing
+    if (!forceRefresh && 
+        profileCache[userId] && 
+        now - profileCache[userId].timestamp < CACHE_DURATION) {
+      console.log("Using cached profile data");
+      setProfile(profileCache[userId].data);
       setIsLoading(false);
       return;
     }
@@ -33,13 +54,13 @@ export function useProfile() {
       setIsLoading(true);
       setError(null);
 
-      console.log("Fetching profile for user:", user.id);
+      console.log("Fetching profile for user:", userId);
 
       // First try to get the profile
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', user.id)
+        .eq('id', userId)
         .single();
 
       if (profileError) {
@@ -50,7 +71,7 @@ export function useProfile() {
           console.log("Creating new profile for user");
           
           const defaultProfile = {
-            id: user.id,
+            id: userId,
             points: 0,
             level: 1,
             streak_current: 0,
@@ -70,6 +91,13 @@ export function useProfile() {
 
           // Process and set the default profile
           const processedProfile = processProfileData(defaultProfile);
+          
+          // Cache the new profile
+          profileCache[userId] = {
+            data: processedProfile,
+            timestamp: now
+          };
+          
           setProfile(processedProfile);
           console.log("New profile created:", processedProfile);
         } else {
@@ -78,6 +106,13 @@ export function useProfile() {
       } else {
         // Calculate level and points to next level
         const processedProfile = processProfileData(profileData);
+        
+        // Cache the profile
+        profileCache[userId] = {
+          data: processedProfile,
+          timestamp: now
+        };
+        
         setProfile(processedProfile);
         console.log("Existing profile loaded:", processedProfile);
       }
@@ -96,6 +131,18 @@ export function useProfile() {
 
   useEffect(() => {
     fetchProfile();
+    
+    // Set up event listeners for window focus
+    const handleFocus = () => {
+      console.log("Window focused, refreshing profile");
+      fetchProfile(false); // Use cache if available
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
   }, [fetchProfile]);
 
   const updateProfile = async (updates: Partial<UserProfile>) => {
@@ -114,6 +161,13 @@ export function useProfile() {
       if (error) throw error;
       
       const updatedProfile = processProfileData(data);
+      
+      // Update cache with new profile data
+      profileCache[user.id] = {
+        data: updatedProfile,
+        timestamp: Date.now()
+      };
+      
       setProfile(updatedProfile);
       console.log("Profile updated:", updatedProfile);
       return updatedProfile;
@@ -199,6 +253,6 @@ export function useProfile() {
     error, 
     updateProfile, 
     addPoints,
-    refreshProfile: fetchProfile 
+    refreshProfile: () => fetchProfile(true) // Force refresh when called directly
   };
 }

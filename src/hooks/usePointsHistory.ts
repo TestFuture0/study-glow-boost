@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase";
@@ -10,25 +11,47 @@ export type PointsHistoryItem = {
   date: string;
 };
 
+// Store cached data between renders/focus
+const cachedPointsHistory: Record<string, {
+  data: PointsHistoryItem[];
+  timestamp: number;
+}> = {};
+
+// Cache duration in milliseconds (5 minutes)
+const CACHE_DURATION = 5 * 60 * 1000;
+
 export function usePointsHistory() {
   const { user } = useAuth();
   const [pointsHistory, setPointsHistory] = useState<PointsHistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  const fetchPointsHistory = useCallback(async () => {
+  const fetchPointsHistory = useCallback(async (forceRefresh = false) => {
     if (!user) return;
+    
+    const userId = user.id;
+    const now = Date.now();
+    
+    // Check cache first unless force refreshing
+    if (!forceRefresh && 
+        cachedPointsHistory[userId] && 
+        now - cachedPointsHistory[userId].timestamp < CACHE_DURATION) {
+      console.log("Using cached points history data");
+      setPointsHistory(cachedPointsHistory[userId].data);
+      setIsLoading(false);
+      return;
+    }
     
     try {
       setIsLoading(true);
       setError(null);
       
-      console.log("Fetching points history for user:", user.id);
+      console.log("Fetching points history for user:", userId);
       
       const { data, error } = await supabase
         .from('points_history')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .order('date', { ascending: false })
         .limit(10);
       
@@ -37,14 +60,27 @@ export function usePointsHistory() {
       if (data && data.length > 0) {
         console.log("Points history data received:", data.length, "items");
         
-        setPointsHistory(data.map(item => ({
+        const formattedData = data.map(item => ({
           id: item.id,
           action: item.action,
           points: item.points,
           date: formatDate(item.date),
-        })));
+        }));
+        
+        // Update the cache
+        cachedPointsHistory[userId] = {
+          data: formattedData,
+          timestamp: now
+        };
+        
+        setPointsHistory(formattedData);
       } else {
         console.log("No points history found for user, setting to empty array.");
+        // Cache empty array too to prevent unnecessary fetches
+        cachedPointsHistory[userId] = {
+          data: [],
+          timestamp: now
+        };
         setPointsHistory([]);
       }
     } catch (err) {
@@ -58,12 +94,24 @@ export function usePointsHistory() {
   
   useEffect(() => {
     fetchPointsHistory();
+    
+    // Set up event listeners for window focus
+    const handleFocus = () => {
+      console.log("Window focused, refreshing points history");
+      fetchPointsHistory(false); // Use cache if available
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
   }, [fetchPointsHistory]);
 
   return { 
     pointsHistory, 
     isLoading, 
     error,
-    refreshHistory: fetchPointsHistory
+    refreshHistory: () => fetchPointsHistory(true) // Force refresh when called directly
   };
 }
