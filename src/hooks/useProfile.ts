@@ -30,9 +30,10 @@ export function useProfile() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [isMounted, setIsMounted] = useState(true);
 
   const fetchProfile = useCallback(async (forceRefresh = false) => {
-    if (!user) {
+    if (!user || !isMounted) {
       setProfile(null);
       setIsLoading(false);
       return;
@@ -99,7 +100,10 @@ export function useProfile() {
             timestamp: now
           };
           
-          setProfile(processedProfile);
+          if (isMounted) {
+            setProfile(processedProfile);
+            setIsLoading(false);
+          }
           console.log("New profile created:", processedProfile);
         } else {
           throw profileError;
@@ -114,46 +118,61 @@ export function useProfile() {
           timestamp: now
         };
         
-        setProfile(processedProfile);
+        if (isMounted) {
+          setProfile(processedProfile);
+          setIsLoading(false);
+        }
         console.log("Existing profile loaded:", processedProfile);
       }
     } catch (err) {
       console.error("Error fetching profile:", err);
-      setError(err instanceof Error ? err.message : "An unknown error occurred");
-      toast({
-        title: "Error fetching profile",
-        description: err instanceof Error ? err.message : "Failed to load profile data",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
+      if (isMounted) {
+        setError(err instanceof Error ? err.message : "An unknown error occurred");
+        setIsLoading(false);
+        
+        toast({
+          title: "Error fetching profile",
+          description: err instanceof Error ? err.message : "Failed to load profile data",
+          variant: "destructive",
+        });
+      }
     }
-  }, [user]);
+  }, [user, isMounted]);
 
   useEffect(() => {
-    fetchProfile();
+    setIsMounted(true);
+    
+    // Set initial data from cache if available
+    if (user && profileCache[user.id]) {
+      console.log("Using cached profile data on mount");
+      setProfile(profileCache[user.id].data);
+      setIsLoading(false);
+    } else {
+      fetchProfile();
+    }
     
     // Set up event listeners for both window focus and visibility changes
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         console.log("Document visible, refreshing profile");
-        fetchProfile(true); // Force refresh when document becomes visible
+        fetchProfile();
       }
     };
     
     const handleFocus = () => {
       console.log("Window focused, refreshing profile");
-      fetchProfile(true); // Always refresh on focus - this is more reliable
+      fetchProfile();
     };
     
     window.addEventListener('focus', handleFocus);
     document.addEventListener('visibilitychange', handleVisibilityChange);
     
     return () => {
+      setIsMounted(false);
       window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [fetchProfile]);
+  }, [fetchProfile, user]);
 
   const updateProfile = async (updates: Partial<UserProfile>) => {
     if (!user) return null;

@@ -4,9 +4,15 @@ import { Loader2, AlertTriangle, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 import { usePointsHistory } from "@/hooks/usePointsHistory";
+import { useEffect } from "react";
 
 const PointsHistory = () => {
-  const { pointsHistory, isLoading, error } = usePointsHistory();
+  const { pointsHistory, isLoading, error, refreshHistory } = usePointsHistory();
+
+  // Refresh data when the component mounts
+  useEffect(() => {
+    refreshHistory();
+  }, [refreshHistory]);
 
   if (isLoading) {
     return (
@@ -59,18 +65,24 @@ const PointsHistory = () => {
       </CardHeader>
       <CardContent className="p-0">
         <div className="divide-y">
-          {pointsHistory.map((item) => (
-            <div key={item.id} className="flex items-center justify-between p-4">
-              <div>
-                <p className="font-medium">{item.action}</p>
-                <p className="text-sm text-muted-foreground">{item.date}</p>
+          {pointsHistory.length > 0 ? (
+            pointsHistory.map((item) => (
+              <div key={item.id} className="flex items-center justify-between p-4">
+                <div>
+                  <p className="font-medium">{item.action}</p>
+                  <p className="text-sm text-muted-foreground">{item.date}</p>
+                </div>
+                <div className="flex items-center font-medium text-studyspark-purple">
+                  +{item.points}
+                  <Star className="ml-1 h-4 w-4 text-amber-400" />
+                </div>
               </div>
-              <div className="flex items-center font-medium text-studyspark-purple">
-                +{item.points}
-                <Star className="ml-1 h-4 w-4 text-amber-400" />
-              </div>
+            ))
+          ) : (
+            <div className="p-4 text-center text-muted-foreground">
+              No points history found. Complete activities to earn points!
             </div>
-          ))}
+          )}
         </div>
       </CardContent>
     </Card>

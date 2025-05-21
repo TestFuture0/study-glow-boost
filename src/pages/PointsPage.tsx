@@ -16,15 +16,12 @@ const PointsPage = () => {
     const storedTab = localStorage.getItem('pointsActiveTab') || 'overview';
     setActiveTab(storedTab);
     
-    // Handle focus events more robustly
+    // Handle focus and visibility change events to ensure tab state persists
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        const storedTab = localStorage.getItem('pointsActiveTab') || 'overview';
-        setActiveTab(storedTab);
-      }
+      const storedTab = localStorage.getItem('pointsActiveTab') || 'overview';
+      setActiveTab(storedTab);
     };
     
-    // Listen for both focus and visibility change events
     window.addEventListener('focus', handleVisibilityChange);
     document.addEventListener('visibilitychange', handleVisibilityChange);
     

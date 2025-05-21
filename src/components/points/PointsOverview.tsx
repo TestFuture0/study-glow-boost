@@ -5,11 +5,17 @@ import { TrendingUp, AlertTriangle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 import { useProfile } from "@/hooks/useProfile";
+import { useEffect } from "react";
 
 const levelRequirements = [0, 250, 500, 1000, 2000, 3500, 5000, 7000, 10000];
 
 const PointsOverview = () => {
-  const { profile, isLoading, error } = useProfile();
+  const { profile, isLoading, error, refreshProfile } = useProfile();
+
+  // Refresh data when the component mounts
+  useEffect(() => {
+    refreshProfile();
+  }, [refreshProfile]);
 
   if (isLoading) {
     return (

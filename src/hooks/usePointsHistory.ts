@@ -25,9 +25,10 @@ export function usePointsHistory() {
   const [pointsHistory, setPointsHistory] = useState<PointsHistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [isMounted, setIsMounted] = useState(true);
 
   const fetchPointsHistory = useCallback(async (forceRefresh = false) => {
-    if (!user) return;
+    if (!user || !isMounted) return;
     
     const userId = user.id;
     const now = Date.now();
@@ -73,7 +74,10 @@ export function usePointsHistory() {
           timestamp: now
         };
         
-        setPointsHistory(formattedData);
+        if (isMounted) {
+          setPointsHistory(formattedData);
+          setIsLoading(false);
+        }
       } else {
         console.log("No points history found for user, setting to empty array.");
         // Cache empty array too to prevent unnecessary fetches
@@ -81,41 +85,56 @@ export function usePointsHistory() {
           data: [],
           timestamp: now
         };
-        setPointsHistory([]);
+        
+        if (isMounted) {
+          setPointsHistory([]);
+          setIsLoading(false);
+        }
       }
     } catch (err) {
       console.error("Error fetching points history:", err);
-      setError(err instanceof Error ? err : new Error("An unknown error occurred"));
-      setPointsHistory([]);
-    } finally {
-      setIsLoading(false);
+      if (isMounted) {
+        setError(err instanceof Error ? err : new Error("An unknown error occurred"));
+        setPointsHistory([]);
+        setIsLoading(false);
+      }
     }
-  }, [user]);
+  }, [user, isMounted]);
   
   useEffect(() => {
-    fetchPointsHistory();
+    setIsMounted(true);
+    
+    // Set initial data from cache or fetch if needed
+    if (user && cachedPointsHistory[user.id]) {
+      console.log("Using cached points history data on mount");
+      setPointsHistory(cachedPointsHistory[user.id].data);
+      setIsLoading(false);
+    } else {
+      fetchPointsHistory();
+    }
     
     // Set up event listeners for both window focus and visibility changes
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         console.log("Document visible, refreshing points history");
-        fetchPointsHistory(true); // Force refresh when document becomes visible
+        fetchPointsHistory();
       }
     };
     
     const handleFocus = () => {
       console.log("Window focused, refreshing points history");
-      fetchPointsHistory(true); // Always refresh on focus - this is more reliable
+      fetchPointsHistory();
     };
     
     window.addEventListener('focus', handleFocus);
     document.addEventListener('visibilitychange', handleVisibilityChange);
     
     return () => {
+      setIsMounted(false);
       window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [fetchPointsHistory]);
+  }, [fetchPointsHistory, user]);
 
   return { 
     pointsHistory, 
