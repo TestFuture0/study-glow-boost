@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase";
@@ -132,16 +133,25 @@ export function useProfile() {
   useEffect(() => {
     fetchProfile();
     
-    // Set up event listeners for window focus
+    // Set up event listeners for both window focus and visibility changes
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log("Document visible, refreshing profile");
+        fetchProfile(true); // Force refresh when document becomes visible
+      }
+    };
+    
     const handleFocus = () => {
       console.log("Window focused, refreshing profile");
-      fetchProfile(false); // Use cache if available
+      fetchProfile(true); // Always refresh on focus - this is more reliable
     };
     
     window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
     
     return () => {
       window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [fetchProfile]);
 

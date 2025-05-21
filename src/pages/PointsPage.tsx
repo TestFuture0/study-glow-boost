@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Star } from "lucide-react";
 import PointsOverview from "@/components/points/PointsOverview";
 import PointsHistory from "@/components/points/PointsHistory";
-import { useEffect, useState } from "react"; // Add useState for tracking active tab
+import { useEffect, useState } from "react";
 
 const PointsPage = () => {
   // Save the active tab to preserve it on focus changes
@@ -16,16 +16,21 @@ const PointsPage = () => {
     const storedTab = localStorage.getItem('pointsActiveTab') || 'overview';
     setActiveTab(storedTab);
     
-    // Event listeners for focus events
-    const handleFocus = () => {
-      const storedTab = localStorage.getItem('pointsActiveTab') || 'overview';
-      setActiveTab(storedTab);
+    // Handle focus events more robustly
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        const storedTab = localStorage.getItem('pointsActiveTab') || 'overview';
+        setActiveTab(storedTab);
+      }
     };
     
-    window.addEventListener('focus', handleFocus);
+    // Listen for both focus and visibility change events
+    window.addEventListener('focus', handleVisibilityChange);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
     
     return () => {
-      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('focus', handleVisibilityChange);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
   
@@ -54,6 +59,7 @@ const PointsPage = () => {
           value={activeTab} 
           onValueChange={handleTabChange} 
           className="w-full"
+          defaultValue="overview"
         >
           <TabsList className="w-full">
             <TabsTrigger value="overview" className="w-full">Overview</TabsTrigger>
@@ -61,11 +67,11 @@ const PointsPage = () => {
           </TabsList>
           
           <TabsContent value="overview" className="space-y-6 pt-4">
-            <PointsOverview key="points-overview" />
+            <PointsOverview />
           </TabsContent>
           
           <TabsContent value="history" className="pt-4">
-            <PointsHistory key="points-history" />
+            <PointsHistory />
           </TabsContent>
         </Tabs>
       </div>

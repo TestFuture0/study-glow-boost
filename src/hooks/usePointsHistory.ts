@@ -95,16 +95,25 @@ export function usePointsHistory() {
   useEffect(() => {
     fetchPointsHistory();
     
-    // Set up event listeners for window focus
+    // Set up event listeners for both window focus and visibility changes
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log("Document visible, refreshing points history");
+        fetchPointsHistory(true); // Force refresh when document becomes visible
+      }
+    };
+    
     const handleFocus = () => {
       console.log("Window focused, refreshing points history");
-      fetchPointsHistory(false); // Use cache if available
+      fetchPointsHistory(true); // Always refresh on focus - this is more reliable
     };
     
     window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
     
     return () => {
       window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [fetchPointsHistory]);
 
