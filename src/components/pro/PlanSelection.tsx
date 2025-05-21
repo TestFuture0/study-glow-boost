@@ -3,17 +3,21 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
-import { Check, CreditCard, Loader2 } from "lucide-react";
+import { Check, CreditCard, Loader2, Settings } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useAuth } from "@/context/AuthContext";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 
 const PlanSelection = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [billingCycle, setBillingCycle] = useState("monthly");
   const { toast } = useToast();
-  const { isSubscribed, plan, isLoading, handleSubscribe, checkSubscription } = useSubscription();
+  const { isSubscribed, plan, expiresAt, isLoading, handleSubscribe, openCustomerPortal, checkSubscription } = useSubscription();
   const { user } = useAuth();
+  const [showTestCardDialog, setShowTestCardDialog] = useState(false);
 
   // Check subscription status on mount and when user changes
   useEffect(() => {
@@ -21,6 +25,15 @@ const PlanSelection = () => {
       checkSubscription();
     }
   }, [user, checkSubscription]);
+
+  // Show formatted expiration date
+  const formattedExpiresAt = expiresAt 
+    ? new Date(expiresAt).toLocaleDateString(undefined, { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      })
+    : null;
 
   const handleSubscribeClick = async (planType: string) => {
     if (!user) {
@@ -35,16 +48,8 @@ const PlanSelection = () => {
     setIsProcessing(true);
 
     try {
-      // Call subscription handler
-      await handleSubscribe(planType);
-      
-      toast({
-        title: "Subscription success",
-        description: `Your ${planType} subscription has been activated!`,
-      });
-      
-      // Refresh subscription status
-      await checkSubscription();
+      await handleSubscribe(planType, billingCycle);
+      // No need for toast here as we will be redirected to Stripe
     } catch (error) {
       console.error("Subscription error:", error);
       toast({
@@ -57,12 +62,43 @@ const PlanSelection = () => {
     }
   };
 
+  const handleManageSubscription = async () => {
+    try {
+      await openCustomerPortal();
+    } catch (error) {
+      console.error("Error opening customer portal:", error);
+    }
+  };
+
   const monthlyPrice = 9.99;
   const annualPrice = 99.99;
   const annualSavings = Math.round(((monthlyPrice * 12 - annualPrice) / (monthlyPrice * 12)) * 100);
 
   return (
     <div className="space-y-6">
+      {isSubscribed && plan === 'pro' && (
+        <div className="bg-green-50 border border-green-200 p-4 rounded-md mb-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-medium text-green-800">You're subscribed to StudySpark Pro!</h3>
+              {formattedExpiresAt && (
+                <p className="text-sm text-green-700">
+                  Your subscription renews on {formattedExpiresAt}
+                </p>
+              )}
+            </div>
+            <Button
+              variant="outline"
+              className="border-green-500 text-green-700 hover:bg-green-50"
+              onClick={handleManageSubscription}
+            >
+              <Settings className="mr-2 h-4 w-4" />
+              Manage Subscription
+            </Button>
+          </div>
+        </div>
+      )}
+
       <div>
         <h2 className="text-center text-2xl font-bold">Upgrade to StudySpark Pro</h2>
         <p className="text-center text-muted-foreground">
@@ -184,34 +220,98 @@ const PlanSelection = () => {
               </div>
             </div>
 
-            <Button
-              className="w-full studyspark-gradient"
-              onClick={() => handleSubscribeClick("pro")}
-              disabled={isProcessing || isLoading || plan === 'pro'}
-            >
-              {isProcessing ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Processing...
-                </>
-              ) : plan === 'pro' ? (
-                "Current Plan"
-              ) : (
-                <>
-                  <CreditCard className="mr-2 h-4 w-4" />
-                  Upgrade Now
-                </>
-              )}
-            </Button>
+            {plan === 'pro' ? (
+              <Button
+                className="w-full"
+                variant="outline"
+                onClick={handleManageSubscription}
+              >
+                <Settings className="mr-2 h-4 w-4" />
+                Manage Subscription
+              </Button>
+            ) : (
+              <Button
+                className="w-full studyspark-gradient"
+                onClick={() => handleSubscribeClick("pro")}
+                disabled={isProcessing || isLoading}
+              >
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <CreditCard className="mr-2 h-4 w-4" />
+                    Upgrade Now
+                  </>
+                )}
+              </Button>
+            )}
           </CardContent>
         </Card>
       </div>
 
       <div className="mx-auto max-w-md text-center text-sm text-muted-foreground">
-        <p>
+        <p className="mb-2">
           Secure payment processed by Stripe. You can cancel your subscription at any time.
         </p>
+        <Button 
+          variant="link" 
+          size="sm" 
+          onClick={() => setShowTestCardDialog(true)}
+        >
+          Use a test card
+        </Button>
       </div>
+
+      {/* Test Card Dialog */}
+      <Dialog open={showTestCardDialog} onOpenChange={setShowTestCardDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Test Card Details</DialogTitle>
+            <DialogDescription>
+              Use these test card details to try out the subscription process in Stripe's test environment.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="cardNumber">Card Number</Label>
+              <Input 
+                id="cardNumber" 
+                value="4242 4242 4242 4242" 
+                readOnly 
+                onClick={(e) => e.currentTarget.select()}
+              />
+              <p className="text-xs text-muted-foreground">This is a Visa test card that will succeed</p>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="expiryDate">Expiry Date</Label>
+                <Input 
+                  id="expiryDate" 
+                  value="Any future date" 
+                  readOnly
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cvc">CVC</Label>
+                <Input 
+                  id="cvc" 
+                  value="Any 3 digits" 
+                  readOnly
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button onClick={() => setShowTestCardDialog(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
