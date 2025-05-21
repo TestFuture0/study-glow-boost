@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
@@ -95,10 +94,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       
       navigate('/');
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Sign in failed',
-        description: error.message || 'Something went wrong',
+        description: error instanceof Error ? error.message : 'Something went wrong',
         variant: 'destructive',
       });
       console.error('Sign in error:', error);
@@ -132,10 +131,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (import.meta.env.DEV) {
         await signIn(email, password);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Sign up failed',
-        description: error.message || 'Something went wrong',
+        description: error instanceof Error ? error.message : 'Something went wrong',
         variant: 'destructive',
       });
       console.error('Sign up error:', error);
@@ -145,20 +144,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    console.log("Attempting to sign out...");
     try {
       setIsLoading(true);
       
-      // First notify user that logout is in progress
       toast({
         title: 'Signing out...',
         description: 'Please wait while we log you out',
       });
       
+      console.log("Calling supabase.auth.signOut()...");
       const { error } = await supabase.auth.signOut();
+      console.log("supabase.auth.signOut() completed. Error:", error);
       
       if (error) throw error;
       
-      // Clear local state
+      console.log("Clearing local user/session state...");
       setUser(null);
       setSession(null);
       
@@ -167,12 +168,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: 'You have been successfully signed out',
       });
       
-      // Navigate after state is cleared
+      console.log("Navigating to /login...");
       navigate('/login');
-    } catch (error: any) {
+      console.log("Navigation to /login attempted.");
+    } catch (error: unknown) {
       toast({
         title: 'Sign out failed',
-        description: error.message || 'Something went wrong',
+        description: error instanceof Error ? error.message : 'Something went wrong',
         variant: 'destructive',
       });
       console.error('Sign out error:', error);

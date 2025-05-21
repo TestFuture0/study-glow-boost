@@ -1,4 +1,3 @@
-
 import MainLayout from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -76,25 +75,12 @@ interface UserBadge {
   id: number;
   progress: number;
   earned: boolean;
-  badge: {
+  badge: { // This is an OBJECT from the joined 'badges' table, or null
     id: number;
     name: string;
     description: string;
     icon: string;
-  };
-}
-
-// Define the expected shape of raw database records
-interface RawUserBadge {
-  id: number;
-  progress: number;
-  earned: boolean;
-  badge: {
-    id: number;
-    name: string;
-    description: string;
-    icon: string;
-  } | null; // Allow for potential null value
+  } | null; 
 }
 
 const AchievementsPage = () => {
@@ -140,47 +126,46 @@ const AchievementsPage = () => {
           .eq('user_id', user.id);
           
         if (badgesError) throw badgesError;
+
+        // Explicitly cast the fetched data to UserBadge[] via unknown
+        const typedUserBadges = userBadges as unknown as UserBadge[] | null;
         
-        if (userBadges && userBadges.length > 0) {
-          console.log("Fetched badges data:", JSON.stringify(userBadges, null, 2));
+        if (typedUserBadges && typedUserBadges.length > 0) {
+          console.log("Fetched badges data ( AchievementsPage ):", JSON.stringify(typedUserBadges, null, 2));
           
-          // Map the badges data, ensuring correct type handling
-          const mappedBadges: Badge[] = [];
-          
-          // Cast the data to our expected structure
-          const typedUserBadges = userBadges as RawUserBadge[];
-          
-          for (const item of typedUserBadges) {
-            // Ensure item.badge is not null and has the expected properties
-            if (item && item.badge && typeof item.badge === 'object') {
-              mappedBadges.push({
-                id: item.badge.id,
-                name: item.badge.name,
-                description: item.badge.description,
+          const mappedBadges: Badge[] = typedUserBadges.map(item => {
+            // item.badge is an object or null, directly use it
+            const badgeData = item.badge; 
+
+            if (badgeData) { // Check if badgeData (the badge object) is not null
+              return {
+                id: badgeData.id,
+                name: badgeData.name,
+                description: badgeData.description,
                 progress: item.progress,
-                icon: item.badge.icon,
+                icon: badgeData.icon,
                 earned: item.earned,
-              });
+              };
             } else {
-              console.warn("Skipping invalid badge data:", item);
+              console.warn("Skipping user_badge item due to missing badge object (badge was null):", item);
+              return null; 
             }
-          }
+          }).filter(Boolean) as Badge[];
           
           if (mappedBadges.length > 0) {
             setBadges(mappedBadges);
           } else {
-            console.log("No valid badges found, using default badges");
-            setBadges(defaultBadges);
+            console.log("No valid badges could be mapped from fetched data, setting to empty array.");
+            setBadges([]);
           }
         } else {
-          // No badges found for user, use defaults
-          console.log("No badges found for user, using defaults");
-          setBadges(defaultBadges);
+          console.log("No badges found for user, setting to empty array.");
+          setBadges([]);
         }
       } catch (err) {
         console.error("Error fetching badges:", err);
         setError(err instanceof Error ? err : new Error("An unknown error occurred"));
-        setBadges(defaultBadges); // Fallback to defaults on error
+        setBadges([]);
       } finally {
         setIsLoading(false);
       }

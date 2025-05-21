@@ -1,4 +1,3 @@
-
 import MainLayout from "@/components/layout/MainLayout";
 import GoalProgress from "@/components/dashboard/GoalProgress";
 import RecentActivity from "@/components/dashboard/RecentActivity";
@@ -57,12 +56,8 @@ const Dashboard = () => {
             unit: goal.unit
           })));
         } else {
-          // Set default goals if none exist
-          setGoals([
-            { id: 1, title: "Study Hours", currentValue: 4, targetValue: 6, unit: "hours" },
-            { id: 2, title: "Flashcards Reviewed", currentValue: 30, targetValue: 50, unit: "cards" },
-            { id: 3, title: "Quizzes Completed", currentValue: 2, targetValue: 3, unit: "quizzes" },
-          ]);
+          // Set to empty array if no goals data exists
+          setGoals([]);
         }
         
         // Get recent activity
@@ -82,37 +77,8 @@ const Dashboard = () => {
             icon: getIconForActivity(activity.action),
           })));
         } else {
-          // Set default activities if none exist
-          setActivities([
-            {
-              id: 1,
-              action: "Completed Quiz",
-              subject: "Organic Chemistry",
-              timestamp: "10 minutes ago",
-              icon: "📝",
-            },
-            {
-              id: 2,
-              action: "Reviewed Flashcards",
-              subject: "Cell Biology",
-              timestamp: "1 hour ago",
-              icon: "🧠",
-            },
-            {
-              id: 3,
-              action: "Earned Badge",
-              subject: "Quiz Master",
-              timestamp: "2 hours ago",
-              icon: "✨",
-            },
-            {
-              id: 4,
-              action: "Created Study Notes",
-              subject: "Physics Mechanics",
-              timestamp: "Yesterday",
-              icon: "📊",
-            },
-          ]);
+          // Set to empty array if no activity data exists
+          setActivities([]);
         }
         
         // Get profile for streak data

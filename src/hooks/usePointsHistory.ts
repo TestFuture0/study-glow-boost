@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase";
@@ -45,44 +44,13 @@ export function usePointsHistory() {
           date: formatDate(item.date),
         })));
       } else {
-        console.log("No points history found, using demo data");
-        // Set default points history if none exists
-        setPointsHistory([
-          {
-            id: 1,
-            action: "Completed Quiz - Organic Chemistry",
-            points: 50,
-            date: "Today, 12:30 PM",
-          },
-          {
-            id: 2,
-            action: "Maintained 5-Day Streak",
-            points: 100,
-            date: "Today, 9:15 AM",
-          },
-          {
-            id: 3,
-            action: "Created 15 Flashcards",
-            points: 30,
-            date: "Yesterday, 4:45 PM",
-          },
-          {
-            id: 4,
-            action: "Completed 100% of Daily Goals",
-            points: 80,
-            date: "Yesterday, 10:20 AM",
-          },
-          {
-            id: 5,
-            action: "Earned 'Speed Learner' Badge",
-            points: 200,
-            date: "Apr 18, 2023",
-          },
-        ]);
+        console.log("No points history found for user, setting to empty array.");
+        setPointsHistory([]);
       }
     } catch (err) {
       console.error("Error fetching points history:", err);
       setError(err instanceof Error ? err : new Error("An unknown error occurred"));
+      setPointsHistory([]);
     } finally {
       setIsLoading(false);
     }

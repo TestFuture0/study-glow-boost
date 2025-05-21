@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,6 +15,9 @@ import {
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { useAuth } from "@/context/AuthContext";
+import { useProfile } from "@/hooks/useProfile";
+import { supabase } from "@/lib/supabase";
 
 type QuizQuestion = {
   id: number;
@@ -35,6 +37,8 @@ const QuizMaker = () => {
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({});
   const [quizSubmitted, setQuizSubmitted] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
+  const { addPoints, profile } = useProfile();
 
   const generateQuiz = async () => {
     if ((!content.trim() && !topic.trim())) {
@@ -102,7 +106,50 @@ const QuizMaker = () => {
     });
   };
 
-  const submitQuiz = () => {
+  const awardQuizMasterBadge = async () => {
+    if (!user || !profile) return;
+    const quizMasterBadgeId = 1;
+
+    try {
+      const { data: existingUserBadge, error: fetchError } = await supabase
+        .from('user_badges')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('badge_id', quizMasterBadgeId)
+        .single();
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        throw fetchError;
+      }
+
+      if (existingUserBadge && !existingUserBadge.earned) {
+        const { error: updateError } = await supabase
+          .from('user_badges')
+          .update({ progress: 100, earned: true, earned_at: new Date().toISOString() })
+          .eq('user_id', user.id)
+          .eq('badge_id', quizMasterBadgeId);
+        if (updateError) throw updateError;
+        toast({ title: "Badge Updated!", description: "You've earned the Quiz Master badge!" });
+      } else if (!existingUserBadge) {
+        const { error: insertError } = await supabase
+          .from('user_badges')
+          .insert({
+            user_id: user.id,
+            badge_id: quizMasterBadgeId,
+            progress: 100,
+            earned: true,
+            earned_at: new Date().toISOString(),
+          });
+        if (insertError) throw insertError;
+        toast({ title: "Badge Awarded!", description: "Quiz Master badge achieved!" });
+      }
+    } catch (error) {
+      console.error("Error awarding Quiz Master badge:", error);
+      toast({ title: "Badge Error", description: "Could not award Quiz Master badge.", variant: "destructive" });
+    }
+  };
+
+  const submitQuiz = async () => {
     if (Object.keys(selectedAnswers).length < questions.length) {
       toast({
         variant: "destructive",
@@ -124,6 +171,32 @@ const QuizMaker = () => {
       title: `Quiz Score: ${score}%`,
       description: `You got ${correctAnswers} out of ${questions.length} questions correct!`,
     });
+
+    // Award points
+    if (user && addPoints) {
+      try {
+        await addPoints(10, `Completed quiz on ${topic || 'custom content'}`);
+        
+        // Also log this as an activity
+        const { error: activityError } = await supabase.from('activity').insert({
+          user_id: user.id,
+          action: 'Completed Quiz',
+          subject: topic || 'custom content'
+        });
+        if (activityError) {
+          console.error("Error logging activity:", activityError);
+          // Decide if you want to toast this error or handle otherwise
+        }
+
+      } catch (error) {
+        console.error("Failed to add points or log activity:", error);
+      }
+    }
+
+    // Award Quiz Master Badge if score is >= 80%
+    if (score >= 80) {
+      await awardQuizMasterBadge();
+    }
   };
 
   const resetQuiz = () => {
